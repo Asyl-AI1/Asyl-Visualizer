@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asyl Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .card-image { aspect-ratio: 1 / 1; object-fit: cover; }
+        .card-overlay { transition: opacity 0.3s ease-in-out; }
+        .card-container:hover .card-overlay { opacity: 1; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { animation: spin 1s linear infinite; }
+        #story-content b, #quiz-question b, #analysis-modal b { color: #4f46e5; }
+        .quiz-option-label { display: block; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s ease-in-out; }
+        .quiz-option-label:hover { background-color: #eef2ff; border-color: #818cf8; }
+        .quiz-option-input:checked + .quiz-option-label { background-color: #c7d2fe; border-color: #6366f1; font-weight: 600; }
+        .analysis-section { border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem; }
+        .chat-bubble { max-width: 75%; padding: 0.75rem 1rem; border-radius: 1rem; }
+        .chat-bubble-ai { background-color: #eef2ff; color: #312e81; align-self: flex-start; border-bottom-left-radius: 0.25rem; }
+        .chat-bubble-user { background-color: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 0.25rem; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Asyl Visualizer</h1>
+            <p class="text-lg text-gray-600 mt-2">Your complete AI-powered vocabulary learning toolkit.</p>
+            <p id="user-id-display" class="text-xs text-gray-400 mt-4 h-4"></p>
+        </header>
+
+        <div class="max-w-4xl mx-auto mb-10">
+            <form id="word-form" class="bg-white p-6 rounded-xl shadow-md flex flex-col sm:flex-row items-center gap-4">
+                <input type="text" id="word-input" placeholder="Enter a word (e.g., 'ephemeral')" class="w-full px-4 py-3 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                <div class="flex gap-2 w-full sm:w-auto flex-wrap justify-center">
+                    <button type="submit" id="generate-btn" class="flex-1 bg-indigo-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-300 flex items-center justify-center min-w-[110px]">
+                        <span id="btn-text">Generate</span><svg id="spinner" class="spinner h-5 w-5 text-white ml-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                    <button type="button" id="create-story-btn" class="flex-1 bg-amber-500 text-white font-semibold px-4 py-3 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-300 flex items-center justify-center min-w-[110px]" disabled>
+                        <span>✨ Story</span><svg id="story-spinner" class="spinner h-5 w-5 text-white ml-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                    <button type="button" id="take-quiz-btn" class="flex-1 bg-teal-500 text-white font-semibold px-4 py-3 rounded-lg hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-all duration-300 flex items-center justify-center min-w-[110px]" disabled>
+                        <span>✨ Quiz</span><svg id="quiz-spinner" class="spinner h-5 w-5 text-white ml-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                </div>
+            </form>
+            <p id="error-message" class="text-red-500 text-center mt-2 h-5"></p>
+        </div>
+
+        <!-- Deck Management UI -->
+        <div id="deck-management" class="max-w-4xl mx-auto mb-6 p-4 bg-white rounded-xl shadow-md flex flex-col sm:flex-row items-center gap-4">
+            <label for="deck-select" class="font-semibold text-gray-700">Current Deck:</label>
+            <select id="deck-select" class="w-full sm:w-auto flex-grow bg-gray-100 border-2 border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+            <button id="new-deck-btn" class="w-full sm:w-auto bg-green-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-600 transition-all">New Deck</button>
+        </div>
+
+        <main id="word-bank" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></main>
+        <div id="loading-initial" class="text-center py-10"><p class="text-gray-500">Loading your word bank...</p></div>
+    </div>
+
+    <!-- Word Card Template -->
+    <template id="word-card-template">
+        <div class="card-container bg-white rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 group flex flex-col">
+            <div class="relative">
+                <img src="" alt="Visualization of a word" class="card-image w-full h-auto bg-gray-200">
+                <div class="card-overlay absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-1 sm:gap-2">
+                    <button class="listen-btn text-white bg-pink-500 hover:bg-pink-600 rounded-full p-3" title="Listen to Word"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button>
+                    <button class="practice-btn text-white bg-purple-500 hover:bg-purple-600 rounded-full p-3" title="Practice with AI"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></button>
+                    <button class="analyze-btn text-white bg-green-500 hover:bg-green-600 rounded-full p-3" title="Analyze Word"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                    <button class="delete-btn text-white bg-red-500 hover:bg-red-600 rounded-full p-3" title="Delete Word"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                </div>
+                <div class="card-spinner absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center hidden"><svg class="spinner h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>
+            </div>
+            <div class="p-4 text-center flex-grow flex flex-col justify-center">
+                <h3 class="word-title font-semibold text-lg capitalize"></h3>
+                <p class="word-translation text-gray-500 text-base"></p>
+            </div>
+        </div>
+    </template>
+    
+    <!-- All Modals -->
+    <div id="new-deck-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50"><div class="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full"><h2 class="text-2xl font-bold mb-4">Create New Deck</h2><form id="new-deck-form"><input type="text" id="new-deck-name" placeholder="Deck Name" class="w-full px-4 py-2 border rounded-lg mb-4" required><div class="flex justify-end gap-4"><button type="button" id="cancel-new-deck-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button><button type="submit" class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Create</button></div></form></div></div>
+    <div id="delete-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50"><div class="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full"><h2 class="text-2xl font-bold mb-4">Confirm Deletion</h2><p class="text-gray-600 mb-6">Are you sure you want to delete this word?</p><div class="flex justify-end gap-4"><button id="cancel-delete-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button><button id="confirm-delete-btn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>
+    <div id="story-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-40"><div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full max-h-[90vh] flex flex-col"><h2 class="text-3xl font-bold mb-4 text-gray-800">Your Vocabulary Story</h2><div class="overflow-y-auto pr-4 -mr-4 mb-6 flex-grow"><p id="story-content" class="text-gray-600 leading-relaxed"></p></div><div class="flex justify-end"><button id="close-story-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Close</button></div></div></div>
+    <div id="quiz-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-40"><div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full"><h2 class="text-3xl font-bold mb-6 text-gray-800 text-center">Vocabulary Quiz</h2><div id="quiz-question-wrapper"><p id="quiz-question" class="text-lg text-gray-700 mb-6 text-center"></p><div id="quiz-options" class="space-y-3 mb-6"></div><p id="quiz-feedback" class="text-center h-6 mb-4 font-semibold"></p></div><div class="flex justify-center gap-4"><button id="submit-quiz-btn" class="px-8 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 font-semibold">Submit</button><button id="next-quiz-btn" class="px-8 py-3 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 font-semibold hidden">Next Question</button><button id="close-quiz-btn" class="px-8 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Close</button></div></div></div>
+    <div id="analysis-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-40"><div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full max-h-[90vh] flex flex-col"><h2 id="analysis-title" class="text-3xl font-bold mb-1 text-gray-800 capitalize"></h2><p id="analysis-translation" class="text-lg text-gray-500 mb-4"></p><div id="analysis-content-wrapper" class="overflow-y-auto pr-4 -mr-4 mb-6 flex-grow"></div><div class="flex justify-end"><button id="close-analysis-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Close</button></div></div></div>
+    <div id="practice-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-40"><div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full h-[80vh] flex flex-col"><h2 class="text-2xl font-bold mb-4 text-gray-800">✨ Conversational Practice: <b id="practice-word" class="text-purple-600"></b></h2><div id="practice-chat-history" class="flex-grow overflow-y-auto p-4 bg-gray-50 rounded-lg mb-4 flex flex-col gap-4"></div><form id="practice-form" class="flex items-center gap-2"><input type="text" id="practice-input" placeholder="Type your response..." class="w-full px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 transition"><button type="submit" id="practice-send-btn" class="bg-purple-500 text-white rounded-full p-2 hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all flex items-center justify-center w-10 h-10"><svg id="practice-send-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg><svg id="practice-spinner" class="spinner h-5 w-5 text-white ml-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></button></form><button id="close-practice-btn" class="text-center text-sm text-gray-500 hover:text-gray-700 mt-3">Close</button></div></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, onSnapshot, deleteDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let db, auth, userId, wordsCollectionRef, decksCollectionRef;
+        let wordToDeleteId = null, currentWordList = [], currentQuiz = {}, currentPractice = {}, decks = [], selectedDeckId = 'all';
+        let wordsUnsubscribe = null; // To detach old listeners
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-vocab-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const el = (id) => document.getElementById(id);
+        const UIElements = {
+            wordForm: el('word-form'), wordInput: el('word-input'), generateBtn: el('generate-btn'), spinner: el('spinner'), wordBank: el('word-bank'), errorMessage: el('error-message'), createStoryBtn: el('create-story-btn'), storySpinner: el('story-spinner'), takeQuizBtn: el('take-quiz-btn'), quizSpinner: el('quiz-spinner'),
+            deckSelect: el('deck-select'), newDeckBtn: el('new-deck-btn'), newDeckModal: el('new-deck-modal'), newDeckForm: el('new-deck-form'), newDeckName: el('new-deck-name'), cancelNewDeckBtn: el('cancel-new-deck-btn'),
+            deleteModal: el('delete-modal'), confirmDeleteBtn: el('confirm-delete-btn'), cancelDeleteBtn: el('cancel-delete-btn'),
+            storyModal: el('story-modal'), storyContent: el('story-content'), closeStoryBtn: el('close-story-btn'),
+            quizModal: el('quiz-modal'), quizQuestion: el('quiz-question'), quizOptions: el('quiz-options'), quizFeedback: el('quiz-feedback'), submitQuizBtn: el('submit-quiz-btn'), nextQuizBtn: el('next-quiz-btn'), closeQuizBtn: el('close-quiz-btn'),
+            analysisModal: el('analysis-modal'), analysisTitle: el('analysis-title'), analysisTranslation: el('analysis-translation'), analysisContentWrapper: el('analysis-content-wrapper'), closeAnalysisBtn: el('close-analysis-btn'),
+            practiceModal: el('practice-modal'), practiceWord: el('practice-word'), practiceChatHistory: el('practice-chat-history'), practiceForm: el('practice-form'), practiceInput: el('practice-input'), practiceSendBtn: el('practice-send-btn'), practiceSendIcon: el('practice-send-icon'), practiceSpinner: el('practice-spinner'), closePracticeBtn: el('close-practice-btn'),
+            userIdDisplay: el('user-id-display'), initialLoadingIndicator: el('loading-initial')
+        };
+
+        async function main() {
+            if (Object.keys(firebaseConfig).length === 0) { UIElements.initialLoadingIndicator.innerText = "Error: App not configured."; return; }
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        UIElements.userIdDisplay.textContent = `User ID: ${userId}`;
+                        wordsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/words`);
+                        decksCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/decks`);
+                        setupDeckListener();
+                        UIElements.wordInput.disabled = false;
+                        UIElements.generateBtn.disabled = false;
+                    } else {
+                        try {
+                            if (initialAuthToken) { await signInWithCustomToken(auth, initialAuthToken); }
+                            else { await signInAnonymously(auth); }
+                        } catch (error) { console.error("Sign-in error:", error); UIElements.initialLoadingIndicator.innerText = "Authentication failed."; }
+                    }
+                });
+            } catch (error) { console.error("Firebase init error:", error); UIElements.initialLoadingIndicator.innerText = "Could not connect."; }
+        }
+        
+        function setupDeckListener() {
+            onSnapshot(decksCollectionRef, async (snapshot) => {
+                decks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                decks.sort((a,b) => a.name.localeCompare(b.name));
+                if (decks.length === 0) {
+                    // Create a default deck if none exist
+                    const defaultDeckRef = await addDoc(decksCollectionRef, { name: "General", createdAt: new Date() });
+                    selectedDeckId = defaultDeckRef.id;
+                } else {
+                    if (!selectedDeckId || selectedDeckId === 'all' || !decks.find(d => d.id === selectedDeckId)) {
+                       selectedDeckId = decks[0].id;
+                    }
+                }
+                populateDeckSelector();
+                setupWordBankListener();
+            });
+        }
+
+        function populateDeckSelector() {
+            UIElements.deckSelect.innerHTML = '<option value="all">All Words</option>';
+            decks.forEach(deck => {
+                const option = document.createElement('option');
+                option.value = deck.id;
+                option.textContent = deck.name;
+                UIElements.deckSelect.appendChild(option);
+            });
+            UIElements.deckSelect.value = selectedDeckId;
+        }
+
+        function setupWordBankListener() {
+            if (wordsUnsubscribe) wordsUnsubscribe(); // Detach the old listener
+
+            let q = wordsCollectionRef;
+            if (selectedDeckId !== 'all') {
+                q = query(wordsCollectionRef, where("deckId", "==", selectedDeckId));
+            }
+
+            wordsUnsubscribe = onSnapshot(q, (snapshot) => {
+                UIElements.initialLoadingIndicator.classList.add('hidden');
+                UIElements.wordBank.innerHTML = '';
+                const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                currentWordList = docs.map(doc => doc.word);
+                UIElements.createStoryBtn.disabled = currentWordList.length < 3;
+                UIElements.takeQuizBtn.disabled = currentWordList.length < 1;
+                if (snapshot.empty) { 
+                    const message = selectedDeckId === 'all' ? 'Your word bank is empty.' : 'This deck is empty.';
+                    UIElements.wordBank.innerHTML = `<p class="text-gray-500 col-span-full text-center">${message}</p>`; 
+                }
+                else { docs.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)).forEach(doc => renderWordCard(doc.id, doc)); }
+            }, (error) => { console.error("Listener error:", error); UIElements.errorMessage.textContent = "Couldn't load words."; });
+        }
+        
+        function renderWordCard(docId, data) {
+            const card = el('word-card-template').content.cloneNode(true).firstElementChild;
+            card.dataset.id = docId;
+            card.querySelector('.card-image').src = data.imageUrl || 'https://placehold.co/400x400/e2e8f0/cbd5e0?text=Image';
+            card.querySelector('.card-image').alt = `Visualization for '${data.word}'`;
+            card.querySelector('.word-title').textContent = data.word;
+            card.querySelector('.word-translation').textContent = data.translation || '...';
+            card.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); showDeleteModal(docId); });
+            card.querySelector('.listen-btn').addEventListener('click', (e) => { e.stopPropagation(); speakWord(data.word); });
+            card.querySelector('.analyze-btn').addEventListener('click', (e) => { e.stopPropagation(); handleAnalysis(data.word, data.translation); });
+            card.querySelector('.practice-btn').addEventListener('click', (e) => { e.stopPropagation(); handlePracticeStart(data.word); });
+            UIElements.wordBank.appendChild(card);
+        }
+
+        UIElements.wordForm.addEventListener('submit', async (e) => { e.preventDefault(); const word = UIElements.wordInput.value.trim().toLowerCase(); if (!word) return showError("Please enter a word."); if (selectedDeckId === 'all') return showError("Please select a deck before adding a new word."); toggleLoading(true, 'generate'); try { const translation = await getTranslation(word); const imagePrompt = `A minimalist, symbolic, visual representation of the word: "${word}"`; const originalImageUrl = await generateImageWithImagen(imagePrompt); const resizedImageUrl = await resizeImage(originalImageUrl); await addDoc(wordsCollectionRef, { word, translation, imageUrl: resizedImageUrl, deckId: selectedDeckId, createdAt: new Date() }); UIElements.wordInput.value = ''; } catch (error) { console.error("Generation process error:", error); showError(error.message || "Failed to create card."); } finally { toggleLoading(false, 'generate'); } });
+        
+        async function handleAnalysis(word, translation) { UIElements.analysisTitle.textContent = word; UIElements.analysisTranslation.textContent = translation || '...'; UIElements.analysisContentWrapper.innerHTML = '<div class="flex justify-center items-center h-48"><div class="spinner h-8 w-8 text-indigo-600"></div></div>'; UIElements.analysisModal.classList.remove('hidden'); try { const analysisData = await getWordAnalysis(word); renderAnalysisContent(analysisData, word); } catch (error) { console.error("Analysis error:", error); UIElements.analysisContentWrapper.innerHTML = `<p class="text-red-500 text-center">${error.message || "Could not analyze the word."}</p>`; } }
+        function renderAnalysisContent(data, word) { const createList = (items) => items && items.length > 0 ? `<ul class="list-disc list-inside">${items.map(i => `<li>${i}</li>`).join('')}</ul>` : '<p class="text-gray-500">Not available.</p>'; UIElements.analysisContentWrapper.innerHTML = `<div class="analysis-section"><h3 class="font-bold text-lg mb-2">Definition</h3><p>${data.definition||'N/A'}</p></div><div class="analysis-section"><h3 class="font-bold text-lg mb-2">Etymology</h3><p>${data.etymology||'N/A'}</p></div><div class="analysis-section"><h3 class="font-bold text-lg mb-2">Example Sentences</h3>${createList(data.exampleSentences)}</div><div class="analysis-section grid grid-cols-1 md:grid-cols-2 gap-8"><div><h3 class="font-bold text-lg mb-2">Synonyms</h3>${createList(data.synonyms)}</div><div><h3 class="font-bold text-lg mb-2">Antonyms</h3>${createList(data.antonyms)}</div></div><div class="analysis-section"><h3 class="font-bold text-lg mb-2">✨ Mnemonic Helper</h3><div id="mnemonic-content" class="text-gray-600 italic mb-4">Click to generate a memory aid.</div><button id="generate-mnemonic-btn" class="bg-fuchsia-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-fuchsia-600 transition-all">Generate Mnemonic</button></div>`; el('generate-mnemonic-btn').addEventListener('click', async (e) => { const btn = e.target; btn.disabled = true; btn.textContent = 'Generating...'; try { el('mnemonic-content').textContent = await generateMnemonic(word, data.definition); } catch(err) { el('mnemonic-content').textContent = "Couldn't generate a mnemonic."; } finally { btn.style.display = 'none'; } }); }
+        
+        UIElements.createStoryBtn.addEventListener('click', async () => { toggleLoading(true, 'story'); try { const story = await generateTextWithGemini(`Write a very short, simple, creative story (100-150 words) using: ${currentWordList.join(', ')}.`); UIElements.storyContent.innerHTML = highlightWords(story, currentWordList); UIElements.storyModal.classList.remove('hidden'); } catch (error) { console.error("Story error:", error); showError(error.message || "Failed to create story."); } finally { toggleLoading(false, 'story'); } });
+        UIElements.takeQuizBtn.addEventListener('click', () => handleStartQuiz());
+        async function handleStartQuiz() { toggleLoading(true, 'quiz'); UIElements.quizModal.classList.remove('hidden'); UIElements.submitQuizBtn.classList.remove('hidden'); UIElements.nextQuizBtn.classList.add('hidden'); UIElements.quizFeedback.textContent = ''; UIElements.quizOptions.innerHTML = ''; UIElements.quizQuestion.textContent = 'Generating...'; try { const word = currentWordList[Math.floor(Math.random() * currentWordList.length)]; const quizData = await generateQuizQuestion(word); currentQuiz = quizData; displayQuiz(quizData, word); } catch (error) { console.error("Quiz start error:", error); showError(error.message || "Could not create question."); UIElements.quizQuestion.textContent = "Could not create question."; } finally { toggleLoading(false, 'quiz'); } }
+        function displayQuiz(quizData, word) { UIElements.quizQuestion.innerHTML = `What best describes <b>${word}</b>?`; UIElements.quizOptions.innerHTML = ''; const shuffled = quizData.options.map((v, i) => ({ v, o: i })).sort(() => Math.random() - 0.5); currentQuiz.correctAnswerIndex = shuffled.findIndex(o => o.o === quizData.correctAnswerIndex); shuffled.forEach((opt, i) => { const id = `q-${i}`; UIElements.quizOptions.innerHTML += `<div><input type="radio" name="quiz" id="${id}" value="${i}" class="hidden quiz-option-input"><label for="${id}" class="quiz-option-label">${opt.v}</label></div>`; }); }
+        UIElements.submitQuizBtn.addEventListener('click', () => { const sel = document.querySelector('input[name="quiz"]:checked'); if (!sel) { UIElements.quizFeedback.textContent = "Select an answer."; UIElements.quizFeedback.className = 'text-center h-6 mb-4 font-semibold text-yellow-600'; return; } const isCorrect = parseInt(sel.value) === currentQuiz.correctAnswerIndex; UIElements.quizFeedback.textContent = isCorrect ? "Correct!" : "Not quite."; UIElements.quizFeedback.className = `text-center h-6 mb-4 font-semibold ${isCorrect ? 'text-green-600' : 'text-red-600'}`; document.querySelectorAll('.quiz-option-label')[currentQuiz.correctAnswerIndex].classList.add('!bg-green-200', '!border-green-500'); UIElements.submitQuizBtn.classList.add('hidden'); UIElements.nextQuizBtn.classList.remove('hidden'); });
+        
+        async function handlePracticeStart(word) { UIElements.practiceModal.classList.remove('hidden'); UIElements.practiceWord.textContent = word; UIElements.practiceChatHistory.innerHTML = ''; UIElements.practiceInput.value = ''; currentPractice = { word, history: [] }; togglePracticeLoading(true); try { const prompt = `You are a friendly language tutor. Start a short, simple conversation with a user to help them practice the English word "${word}". Ask them a question or create a scenario that prompts them to use the word in a sentence. Be concise and encouraging.`; const firstMessage = await generateTextWithGemini(prompt); addMessageToPracticeChat('ai', firstMessage); } catch (error) { addMessageToPracticeChat('ai', 'I seem to be having trouble starting. Please try again in a moment!'); console.error("Practice start error:", error); } finally { togglePracticeLoading(false); } }
+        UIElements.practiceForm.addEventListener('submit', async(e) => { e.preventDefault(); const userInput = UIElements.practiceInput.value.trim(); if (!userInput || UIElements.practiceSendBtn.disabled) return; addMessageToPracticeChat('user', userInput); UIElements.practiceInput.value = ''; togglePracticeLoading(true); try { const prompt = `You are a friendly language tutor. A user is practicing the word "${currentPractice.word}". Here is the conversation history so far (as a JSON array of objects with 'role' and 'content' keys): ${JSON.stringify(currentPractice.history)}. The user just said: "${userInput}". Your task is to respond to the user. Keep your response concise (1-2 sentences). If they used the word "${currentPractice.word}" correctly, praise them and continue the conversation. If they used it incorrectly or didn't use it, gently guide them to use it correctly in their next response.`; const aiResponse = await generateTextWithGemini(prompt); addMessageToPracticeChat('ai', aiResponse); } catch(error) { addMessageToPracticeChat('ai', 'Sorry, I had a little trouble there. Could you say that again?'); console.error("Practice reply error:", error); } finally { togglePracticeLoading(false); } });
+        function addMessageToPracticeChat(role, content) { currentPractice.history.push({ role, content }); const bubble = document.createElement('div'); bubble.className = `chat-bubble ${role === 'ai' ? 'chat-bubble-ai' : 'chat-bubble-user'}`; bubble.textContent = content; UIElements.practiceChatHistory.appendChild(bubble); UIElements.practiceChatHistory.scrollTop = UIElements.practiceChatHistory.scrollHeight; }
+        function togglePracticeLoading(isLoading) { UIElements.practiceInput.disabled = isLoading; UIElements.practiceSendBtn.disabled = isLoading; UIElements.practiceSendIcon.classList.toggle('hidden', isLoading); UIElements.practiceSpinner.classList.toggle('hidden', !isLoading); }
+        
+        function speakWord(word) { if ('speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(word); utterance.lang = 'en-US'; window.speechSynthesis.speak(utterance); } else { showError("Sorry, your browser doesn't support text-to-speech."); } }
+        async function getTranslation(word) { return generateTextWithGemini(`Translate the English word "${word}" into Russian. Return ONLY the single most common translated word.`); }
+        async function generateMnemonic(word, definition) { return generateTextWithGemini(`Create a short, clever, and memorable mnemonic phrase to help remember the word "${word}", which means "${definition}".`); }
+        async function getWordAnalysis(word) { const prompt = `Provide a detailed analysis of the English word: "${word}".`; const schema = { type: "OBJECT", properties: { "definition": { "type": "STRING" }, "etymology": { "type": "STRING" }, "exampleSentences": { "type": "ARRAY", "items": { "type": "STRING" } }, "synonyms": { "type": "ARRAY", "items": { "type": "STRING" } }, "antonyms": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["definition", "etymology", "exampleSentences", "synonyms", "antonyms"] }; return callGeminiWithSchema(prompt, schema); }
+        async function generateQuizQuestion(word) { const prompt = `Generate a multiple-choice question for the word: "${word}". Provide 3 plausible incorrect answers and one correct definition or synonym.`; const schema = { type: "OBJECT", properties: { "options": { "type": "ARRAY", "items": { "type": "STRING" } }, "correctAnswerIndex": { "type": "NUMBER" } }, required: ["options", "correctAnswerIndex"] }; return callGeminiWithSchema(prompt, schema); }
+        async function callGeminiWithSchema(prompt, schema) { const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; const resultText = await callGeminiAPI(payload); return JSON.parse(resultText); }
+        async function generateTextWithGemini(prompt) { return callGeminiAPI({ contents: [{ parts: [{ text: prompt }] }] }); }
+        async function callGeminiAPI(payload) { const apiKey = ""; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const error = await response.json(); throw new Error(error.error?.message || "API request failed."); } const result = await response.json(); if (result.candidates?.[0]?.content?.parts?.[0]?.text) { return result.candidates[0].content.parts[0].text; } throw new Error("Could not parse API response."); }
+        async function generateImageWithImagen(prompt) { const apiKey = ""; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`; const payload = { instances: [{ prompt }], parameters: { "sampleCount": 1 } }; const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) { const error = await response.json(); throw new Error(error.error?.message || "Image generation failed."); } const result = await response.json(); if (result.predictions?.[0]?.bytesBase64Encoded) { return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`; } throw new Error("Could not get image from API."); }
+        function resizeImage(base64Str, maxWidth = 512, maxHeight = 512) { return new Promise((resolve, reject) => { const img = new Image(); img.src = base64Str; img.onload = () => { const canvas = document.createElement('canvas'); let { width, height } = img; if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } } else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.9)); }; img.onerror = () => reject(new Error("Image loading failed for resize")); }); }
+        
+        function showDeleteModal(docId) { wordToDeleteId = docId; UIElements.deleteModal.classList.remove('hidden'); }
+        async function handleDeleteWord() { if (!wordToDeleteId) return; try { await deleteDoc(doc(wordsCollectionRef, wordToDeleteId)); } catch (error) { console.error("Delete error:", error); showError("Failed to delete word."); } finally { UIElements.deleteModal.classList.add('hidden'); } }
+        UIElements.cancelDeleteBtn.addEventListener('click', () => UIElements.deleteModal.classList.add('hidden'));
+        UIElements.confirmDeleteBtn.addEventListener('click', handleDeleteWord);
+        UIElements.closeStoryBtn.addEventListener('click', () => UIElements.storyModal.classList.add('hidden'));
+        UIElements.closeAnalysisBtn.addEventListener('click', () => UIElements.analysisModal.classList.add('hidden'));
+        UIElements.closeQuizBtn.addEventListener('click', () => UIElements.quizModal.classList.add('hidden'));
+        UIElements.closePracticeBtn.addEventListener('click', () => UIElements.practiceModal.classList.add('hidden'));
+        UIElements.nextQuizBtn.addEventListener('click', handleStartQuiz);
+        UIElements.deckSelect.addEventListener('change', (e) => { selectedDeckId = e.target.value; setupWordBankListener(); });
+        UIElements.newDeckBtn.addEventListener('click', () => UIElements.newDeckModal.classList.remove('hidden'));
+        UIElements.cancelNewDeckBtn.addEventListener('click', () => UIElements.newDeckModal.classList.add('hidden'));
+        UIElements.newDeckForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = UIElements.newDeckName.value.trim(); if (name) { await addDoc(decksCollectionRef, { name, createdAt: new Date() }); UIElements.newDeckName.value = ''; UIElements.newDeckModal.classList.add('hidden'); } });
+        
+        function toggleLoading(isLoading, type) { const buttons = { generate: [UIElements.generateBtn, UIElements.spinner], story: [UIElements.createStoryBtn, UIElements.storySpinner], quiz: [UIElements.takeQuizBtn, UIElements.quizSpinner] }; const [btn, spin] = buttons[type] || []; if (btn) { const textSpan = btn.querySelector('span'); btn.disabled = isLoading; if (textSpan) textSpan.style.display = isLoading ? 'none' : 'inline-block'; spin.classList.toggle('hidden', !isLoading); } if (type === 'generate') UIElements.wordInput.disabled = isLoading; if(isLoading) UIElements.errorMessage.textContent = ''; }
+        function showError(message) { UIElements.errorMessage.textContent = message; setTimeout(() => { UIElements.errorMessage.textContent = ''; }, 4000); }
+        function highlightWords(text, words) { words.forEach(word => { text = text.replace(new RegExp(`\\b(${word})\\b`, 'gi'), '<b>$1</b>'); }); return text; }
+
+        main();
+    </script>
+</body>
+</html>
